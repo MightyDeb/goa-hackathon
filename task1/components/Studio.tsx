@@ -543,29 +543,57 @@ export default function Studio() {
 
       // No navigator.share attempt here on purpose: this branch is only reached
       // when the export wasn't warm, and by now the transient activation the
-      // share sheet requires is likely spent. Save the card and open the
-      // composer instead — that always works.
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = safeFileName(name);
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      // share sheet requires is likely spent.
+      //
+      // A page cannot attach a file to X's composer, so the brief's other
+      // accepted form applies here: host the card and tweet a link whose OG
+      // tags render it. If hosting is unavailable we degrade to saving the PNG
+      // for manual attachment rather than failing.
+      let shareUrl: string | null = null;
+      try {
+        const form = new FormData();
+        form.append("image", new File([blob], safeFileName(name), { type: "image/png" }));
+        form.append("name", name);
+        form.append("title", title);
+        form.append("template", templateId);
+        const res = await fetch("/api/share", { method: "POST", body: form });
+        if (res.ok) {
+          shareUrl = ((await res.json()) as { shareUrl: string }).shareUrl;
+        } else {
+          const detail = await res.json().catch(() => null);
+          console.warn("card hosting unavailable", res.status, detail);
+        }
+      } catch (uploadError) {
+        console.warn("card hosting unavailable", uploadError);
+      }
 
-      const intent = tweetIntentUrl(caption);
+      if (!shareUrl) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = safeFileName(name);
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      }
+
+      const intent = tweetIntentUrl(caption, shareUrl ?? undefined);
       if (pending && !pending.closed) {
         pending.location.replace(intent);
       } else {
         const opened = window.open(intent, "_blank", "noopener");
         if (!opened) {
           setTweetIntent(intent);
-          setStatus("Card saved. Popup blocked — use the “Open X” link below.");
+          setStatus("Popup blocked — use the “Open X” link below.");
           return;
         }
       }
-      setStatus("Card saved to your downloads — attach it in the tweet that just opened.");
+      setStatus(
+        shareUrl
+          ? "X opened — your card shows as the tweet's preview image."
+          : "Card saved to your downloads — attach it in the tweet that just opened.",
+      );
     } catch (error) {
       pending?.close();
       // The user dismissing the share sheet is not a failure.
