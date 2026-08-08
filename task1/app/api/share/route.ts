@@ -51,6 +51,17 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("share upload failed", error);
-    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+    // Report the actual cause. A bare "Upload failed" forces a trip through the
+    // Vercel logs to answer the only question that matters here: did the Blob
+    // token reach the function, or did Blob itself reject the write?
+    return NextResponse.json(
+      {
+        error: "Upload failed",
+        reason: error instanceof Error ? error.message : String(error),
+        // Presence only — never the value.
+        blobConfigured: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
+      },
+      { status: 500 },
+    );
   }
 }

@@ -510,7 +510,18 @@ export default function Studio() {
       form.append("title", title);
       form.append("template", templateId);
       const res = await fetch("/api/share", { method: "POST", body: form });
-      if (!res.ok) throw new Error(`Upload failed (${res.status})`);
+      if (!res.ok) {
+        // Surface the server's stated cause rather than a bare status code.
+        const detail = await res
+          .json()
+          .then((d: { reason?: string; blobConfigured?: boolean }) =>
+            d.blobConfigured === false
+              ? "storage not configured"
+              : (d.reason ?? `HTTP ${res.status}`),
+          )
+          .catch(() => `HTTP ${res.status}`);
+        throw new Error(detail);
+      }
       const { shareUrl } = (await res.json()) as { shareUrl: string };
 
       const intent = tweetIntentUrl(caption, shareUrl);
@@ -533,7 +544,8 @@ export default function Studio() {
     } catch (error) {
       pending?.close();
       console.error(error);
-      setStatus("Couldn't open X. Download the card and post it manually.");
+      const why = error instanceof Error ? error.message : String(error);
+      setStatus(`Couldn't open X (${why}). Download the card and post it manually.`);
     } finally {
       setBusy(null);
     }
