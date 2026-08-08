@@ -1,0 +1,66 @@
+/*
+ * Kelly green + golden yellow.
+ *
+ * Golden yellow on *bright* kelly green (#4CBB17) is only ~1.8:1 contrast —
+ * genuinely unreadable. So kelly green carries the accents, borders and fills,
+ * while the surfaces are deep kelly-green shades. That puts the gold body text
+ * at ~13:1 and the kelly accents at ~7:1, both comfortably past WCAG AA.
+ */
+:root {
+  --bg: #04170a;
+  --bg-raised: #0a2e12;
+  --bg-input: #0d3a17;
+  --border: #1d6b2c;
+  --text: #ffd230;
+  --muted: #b9c98d;
+  --accent: #4cbb17;
+  --accent-2: #7be83a;
+  --gold-soft: #ffe9a8;
+  --radius: 14px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background:
+    radial-gradient(900px 600px at 12% -8%, rgba(76, 187, 23, 0.18), transparent 60%),
+    radial-gradient(760px 520px at 92% 8%, rgba(255, 210, 48, 0.1), transparent 62%),
+    var(--bg);
+  background-attachment: fixed;
+  color: var(--text);
+  font-family: var(--font-body), system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100dvh;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
