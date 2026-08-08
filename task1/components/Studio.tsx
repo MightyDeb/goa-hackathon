@@ -519,6 +519,7 @@ export default function Studio() {
       // tags render it. If hosting is unavailable we degrade to saving the PNG
       // for manual attachment rather than failing.
       let shareUrl: string | null = null;
+      let hostingProblem: string | null = null;
       try {
         const form = new FormData();
         form.append("image", new File([blob], safeFileName(name), { type: "image/png" }));
@@ -529,11 +530,20 @@ export default function Studio() {
         if (res.ok) {
           shareUrl = ((await res.json()) as { shareUrl: string }).shareUrl;
         } else {
-          const detail = await res.json().catch(() => null);
+          const detail = (await res.json().catch(() => null)) as {
+            reason?: string;
+            blobConfigured?: boolean;
+          } | null;
           console.warn("card hosting unavailable", res.status, detail);
+          hostingProblem =
+            detail?.blobConfigured === false
+              ? "storage not configured"
+              : (detail?.reason ?? `HTTP ${res.status}`);
         }
       } catch (uploadError) {
         console.warn("card hosting unavailable", uploadError);
+        hostingProblem =
+          uploadError instanceof Error ? uploadError.message : String(uploadError);
       }
 
       if (!shareUrl) {
@@ -561,7 +571,7 @@ export default function Studio() {
       setStatus(
         shareUrl
           ? "X opened — your card shows as the tweet's preview image."
-          : "Card saved to your downloads — attach it in the tweet that just opened.",
+          : `No link — card hosting failed (${hostingProblem ?? "unknown"}). Card saved to your downloads; attach it in the tweet.`,
       );
     } catch (error) {
       pending?.close();
