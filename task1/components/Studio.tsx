@@ -482,45 +482,18 @@ export default function Studio() {
    * API and no OAuth (plan §4).
    */
   const onShareX = async () => {
-    // Both paths depend on user activation, which is spent by awaiting a slow
-    // export: navigator.share() demands *transient* activation (~5s from the
-    // click) and window.open() is popup-blocked without it. So the path is
-    // chosen synchronously, off the already-warmed export, before any await.
-    const warmed =
-      exportCache.current?.key === sceneKey() ? exportCache.current.blob : null;
-
-    let readyFile: File | null = null;
-    if (canShareFiles && warmed) {
-      const candidate = new File([warmed], safeFileName(name), { type: "image/png" });
-      if (navigator.canShare?.({ files: [candidate] })) readyFile = candidate;
-    }
-
-    // Fast path: the PNG already exists, so the sheet opens with activation
-    // still fresh and X receives a genuine attached photo.
-    if (readyFile) {
-      setBusy("Opening share sheet…");
-      try {
-        await navigator.share({
-          files: [readyFile],
-          text: caption,
-          title: `${EVENT_NAME} Builder ID`,
-        });
-        setStatus("Choose X in the share sheet to post your card.");
-      } catch (error) {
-        if ((error as Error)?.name === "AbortError") setStatus(null);
-        else {
-          console.error(error);
-          setStatus("Share sheet unavailable — use Download, then post it on X.");
-        }
-      } finally {
-        setBusy(null);
-      }
-      return;
-    }
-
-    // Composer path. Deliberately NOT "noopener": that makes window.open return
-    // null while still opening the tab, stranding the user on an about:blank we
-    // hold no handle to. We sever `opener` ourselves instead.
+    // This button always goes to X's composer — never the OS share sheet.
+    //
+    // An earlier version routed to navigator.share() whenever the browser
+    // reported file-share support, on the assumption that meant "mobile".
+    // Chrome and Edge on Windows report it too, so a desktop click opened the
+    // Windows share sheet and never reached X. The sheet lives on the separate
+    // "Share…" button; a button labelled "Share on X" opens X.
+    //
+    // Deliberately NOT "noopener": that makes window.open return null while
+    // still opening the tab, stranding the user on an about:blank we hold no
+    // handle to. We sever `opener` ourselves instead. Opened synchronously
+    // inside the click, before any await, or the popup blocker rejects it.
     const pending = window.open("about:blank", "_blank");
     if (pending) {
       try {
@@ -541,10 +514,6 @@ export default function Studio() {
     try {
       const blob = await exportBlob();
 
-      // No navigator.share attempt here on purpose: this branch is only reached
-      // when the export wasn't warm, and by now the transient activation the
-      // share sheet requires is likely spent.
-      //
       // A page cannot attach a file to X's composer, so the brief's other
       // accepted form applies here: host the card and tweet a link whose OG
       // tags render it. If hosting is unavailable we degrade to saving the PNG
