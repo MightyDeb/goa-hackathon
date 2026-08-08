@@ -24,7 +24,10 @@ type BlobAccess = "public" | "private";
 
 export type ShareRecord = {
   id: string;
+  /** The full 4:5 card, shown on the share page itself. */
   imageUrl: string;
+  /** 1200x630 companion used for og:image. Absent on older records. */
+  ogUrl?: string;
   name: string;
   title: string;
   template: string;
@@ -85,22 +88,30 @@ export function newShareId(): string {
 }
 
 export async function putShare(
-  meta: Omit<ShareRecord, "imageUrl" | "createdAt">,
+  meta: Omit<ShareRecord, "imageUrl" | "ogUrl" | "createdAt">,
   image: ArrayBuffer,
+  ogImage?: ArrayBuffer | null,
 ): Promise<ShareRecord> {
   const createdAt = Date.now();
-  // Always our own route, never the raw blob URL: it is publicly fetchable by
-  // X's crawler even when the underlying store is private.
-  const record: ShareRecord = { ...meta, imageUrl: `/api/card/${meta.id}`, createdAt };
+  // Always our own routes, never the raw blob URL: these stay publicly
+  // fetchable by X's crawler even when the underlying store is private.
+  const record: ShareRecord = {
+    ...meta,
+    imageUrl: `/api/card/${meta.id}`,
+    ogUrl: ogImage ? `/api/og/${meta.id}` : undefined,
+    createdAt,
+  };
 
   if (useBlob()) {
     await blobPut(`cards/${meta.id}.png`, image, "image/png");
+    if (ogImage) await blobPut(`og/${meta.id}.jpg`, ogImage, "image/jpeg");
     await blobPut(`meta/${meta.id}.json`, JSON.stringify(record), "application/json");
     return record;
   }
 
   await mkdir(LOCAL_DIR, { recursive: true });
   await writeFile(path.join(LOCAL_DIR, `${meta.id}.png`), Buffer.from(image));
+  if (ogImage) await writeFile(path.join(LOCAL_DIR, `${meta.id}-og.jpg`), Buffer.from(ogImage));
   await writeFile(path.join(LOCAL_DIR, `${meta.id}.json`), JSON.stringify(record));
   return record;
 }
@@ -137,6 +148,22 @@ export async function getCardImage(id: string): Promise<Uint8Array | null> {
 
   try {
     return new Uint8Array(await readFile(path.join(LOCAL_DIR, `${id}.png`)));
+  } catch {
+    return null;
+  }
+}
+
+/** The 1200x630 link-preview JPEG. */
+export async function getOgImage(id: string): Promise<Uint8Array | null> {
+  if (!/^[a-f0-9]{8,32}$/i.test(id)) return null;
+
+  if (useBlob()) {
+    const raw = await blobGet(`og/${id}.jpg`);
+    return raw ? new Uint8Array(raw) : null;
+  }
+
+  try {
+    return new Uint8Array(await readFile(path.join(LOCAL_DIR, `${id}-og.jpg`)));
   } catch {
     return null;
   }

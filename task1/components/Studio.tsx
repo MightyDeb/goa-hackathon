@@ -19,6 +19,7 @@ import {
 } from "@/lib/renderCard";
 import { FONT_BOOK } from "@/lib/fonts";
 import { ACCEPTED_TYPES, canvasToBlob, loadPhoto } from "@/lib/image";
+import { OG_HEIGHT, OG_WIDTH, renderOgImage } from "@/lib/ogCard";
 import { BUILDER_TITLES, ROLES, rollTitle } from "@/lib/titles";
 import { EVENT_NAME, buildCaption, safeFileName, tweetIntentUrl } from "@/lib/caption";
 import styles from "./studio.module.css";
@@ -448,6 +449,34 @@ export default function Studio() {
     };
   }, [ready, name, role, title, templateId, zoom, hasPhoto, exportBlob]);
 
+  /** Compose the 1200x630 link-preview image from the finished card. */
+  const buildOgBlob = useCallback(
+    async (cardBlob: Blob): Promise<Blob | null> => {
+      try {
+        const bitmap = await createImageBitmap(cardBlob);
+        const canvas = document.createElement("canvas");
+        canvas.width = OG_WIDTH;
+        canvas.height = OG_HEIGHT;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return null;
+        renderOgImage(
+          ctx,
+          bitmap,
+          { name, title },
+          getTemplate(sceneRef.current.templateId),
+          FONT_BOOK,
+        );
+        bitmap.close?.();
+        return await canvasToBlob(canvas, "image/jpeg", 0.86);
+      } catch (error) {
+        // A missing preview is survivable; the card still uploads.
+        console.warn("og image build failed", error);
+        return null;
+      }
+    },
+    [name, title],
+  );
+
   const onDownload = async () => {
     setBusy("Building your card…");
     try {
@@ -523,6 +552,10 @@ export default function Studio() {
       try {
         const form = new FormData();
         form.append("image", new File([blob], safeFileName(name), { type: "image/png" }));
+        // 1.91:1 companion so the link preview isn't a centre-crop of the 4:5
+        // card. JPEG because a preview thumbnail has no need of PNG's weight.
+        const og = await buildOgBlob(blob);
+        if (og) form.append("og", new File([og], "og.jpg", { type: "image/jpeg" }));
         form.append("name", name);
         form.append("title", title);
         form.append("template", templateId);

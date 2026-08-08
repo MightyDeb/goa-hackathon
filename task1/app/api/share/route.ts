@@ -32,6 +32,10 @@ export async function POST(request: Request) {
   const clip = (v: FormDataEntryValue | null, max: number) =>
     typeof v === "string" ? v.slice(0, max) : "";
 
+  const og = form.get("og");
+  const ogBuffer =
+    og instanceof File && og.size > 0 && og.size <= MAX_BYTES ? await og.arrayBuffer() : null;
+
   try {
     const record = await putShare(
       {
@@ -41,6 +45,7 @@ export async function POST(request: Request) {
         template: clip(form.get("template"), 40),
       },
       await image.arrayBuffer(),
+      ogBuffer,
     );
 
     const origin = new URL(request.url).origin;

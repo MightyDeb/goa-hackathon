@@ -29,10 +29,18 @@ export async function generateMetadata({
   const record = await getShare(id);
   if (!record) return { title: `Card not found — ${EVENT_NAME}` };
 
-  const image = await absolute(record.imageUrl);
+  // Prefer the 1200x630 companion: handing crawlers the 4:5 card gets it
+  // centre-cropped down to the middle of the photo slot, losing the logo,
+  // the name and the dates entirely.
+  const preview = await absolute(record.ogUrl ?? record.imageUrl);
+  const hasWideOg = Boolean(record.ogUrl);
   const who = record.name ? `${record.name} is a ${record.title}` : record.title;
   const title = `${who} — ${EVENT_NAME}`;
-  const description = `Builder ID card from ${EVENT_NAME}. Make your own ${HASHTAG}`;
+  // Kept near 150 characters: long enough to fill a SERP snippet, short enough
+  // not to be truncated in one.
+  const description =
+    `${record.name || "A builder"} claimed the title of ${record.title} at ` +
+    `${EVENT_NAME}, 28–31 Oct. Make your own Builder ID card — no login. ${HASHTAG}`;
 
   return {
     title,
@@ -40,14 +48,22 @@ export async function generateMetadata({
     openGraph: {
       title,
       description,
-      images: [{ url: image, width: 1080, height: 1350, alt: title }],
+      siteName: EVENT_NAME,
+      images: [
+        {
+          url: preview,
+          width: hasWideOg ? 1200 : 1080,
+          height: hasWideOg ? 630 : 1350,
+          alt: title,
+        },
+      ],
       type: "website",
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: [image],
+      images: [preview],
     },
     // Deliberately NO `robots: { index: false }` here. Keeping these pages out
     // of search is handled in robots.txt, which can exempt the social crawlers;
