@@ -11,7 +11,7 @@
   "dependencies": {
     "@vercel/blob": "^2.7.0",
     "heic2any": "^0.0.4",
-    "next": "15.1.6",
+    "next": "^15.5.23",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "server-only": "^0.0.1"
