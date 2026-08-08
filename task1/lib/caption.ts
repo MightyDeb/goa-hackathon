@@ -17,8 +17,14 @@ export function buildCaption(title: string, name?: string): string {
   return `I'm now officially ${article(who)} ${who} at ${EVENT_NAME} 🏖️${suffix} ${HASHTAG}`;
 }
 
-export function tweetIntentUrl(caption: string, url: string): string {
-  const params = new URLSearchParams({ text: caption, url });
+/**
+ * `url` is optional on purpose. The card is attached as a real image rather
+ * than linked, and X suppresses the link-preview card whenever media is
+ * attached — so a URL here would just be dead text in the tweet.
+ */
+export function tweetIntentUrl(caption: string, url?: string): string {
+  const params = new URLSearchParams({ text: caption });
+  if (url) params.set("url", url);
   return `https://twitter.com/intent/tweet?${params.toString()}`;
 }
 

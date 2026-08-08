@@ -470,18 +470,57 @@ export default function Studio() {
   };
 
   /**
-   * Always opens X's own compose box, pre-filled. The card is uploaded first so
-   * the tweet carries a /share/[id] link whose OG tags render the actual card
-   * as the preview image. Still no X API and no OAuth (plan §4).
+   * Gets the card into an X post with no server involved at all.
+   *
+   * Mobile: hand the real PNG to the OS share sheet, where X receives it as a
+   * genuine attached photo. Desktop: save the PNG and open X's composer with
+   * the caption ready, so it only needs dragging in.
+   *
+   * There is deliberately no upload and no link. X suppresses the link-preview
+   * card as soon as media is attached, so hosting an image to link to would buy
+   * nothing while adding a storage dependency and a failure mode. Still no X
+   * API and no OAuth (plan §4).
    */
   const onShareX = async () => {
-    // Popup blockers only allow window.open synchronously inside the gesture,
-    // so the tab is opened now and pointed at X once the upload lands.
-    //
-    // Deliberately NOT "noopener": with that feature the spec makes window.open
-    // return null while still opening the tab, which leaves the user staring at
-    // a stranded about:blank we have no handle to navigate. We take the handle
-    // and sever `opener` ourselves instead.
+    // Both paths depend on user activation, which is spent by awaiting a slow
+    // export: navigator.share() demands *transient* activation (~5s from the
+    // click) and window.open() is popup-blocked without it. So the path is
+    // chosen synchronously, off the already-warmed export, before any await.
+    const warmed =
+      exportCache.current?.key === sceneKey() ? exportCache.current.blob : null;
+
+    let readyFile: File | null = null;
+    if (canShareFiles && warmed) {
+      const candidate = new File([warmed], safeFileName(name), { type: "image/png" });
+      if (navigator.canShare?.({ files: [candidate] })) readyFile = candidate;
+    }
+
+    // Fast path: the PNG already exists, so the sheet opens with activation
+    // still fresh and X receives a genuine attached photo.
+    if (readyFile) {
+      setBusy("Opening share sheet…");
+      try {
+        await navigator.share({
+          files: [readyFile],
+          text: caption,
+          title: `${EVENT_NAME} Builder ID`,
+        });
+        setStatus("Choose X in the share sheet to post your card.");
+      } catch (error) {
+        if ((error as Error)?.name === "AbortError") setStatus(null);
+        else {
+          console.error(error);
+          setStatus("Share sheet unavailable — use Download, then post it on X.");
+        }
+      } finally {
+        setBusy(null);
+      }
+      return;
+    }
+
+    // Composer path. Deliberately NOT "noopener": that makes window.open return
+    // null while still opening the tab, stranding the user on an about:blank we
+    // hold no handle to. We sever `opener` ourselves instead.
     const pending = window.open("about:blank", "_blank");
     if (pending) {
       try {
@@ -489,63 +528,54 @@ export default function Studio() {
       } catch {
         /* cross-origin guard; nothing to sever */
       }
-      // Something to look at while the upload runs.
       pending.document.write(
         `<!doctype html><meta charset="utf-8"><title>Opening X…</title>` +
           `<body style="margin:0;display:grid;place-items:center;height:100vh;` +
-          `background:#0a0518;color:#f4f0ff;font:16px system-ui">` +
+          `background:#04170a;color:#ffd230;font:16px system-ui">` +
           `Preparing your card, then opening X…</body>`,
       );
       pending.document.close();
     }
 
-    setBusy("Uploading card for the tweet preview…");
+    setBusy("Preparing your card…");
     try {
       const blob = await exportBlob();
-      const file = new File([blob], safeFileName(name), { type: "image/png" });
 
-      const form = new FormData();
-      form.append("image", file);
-      form.append("name", name);
-      form.append("title", title);
-      form.append("template", templateId);
-      const res = await fetch("/api/share", { method: "POST", body: form });
-      if (!res.ok) {
-        // Surface the server's stated cause rather than a bare status code.
-        const detail = await res
-          .json()
-          .then((d: { reason?: string; blobConfigured?: boolean }) =>
-            d.blobConfigured === false
-              ? "storage not configured"
-              : (d.reason ?? `HTTP ${res.status}`),
-          )
-          .catch(() => `HTTP ${res.status}`);
-        throw new Error(detail);
-      }
-      const { shareUrl } = (await res.json()) as { shareUrl: string };
+      // No navigator.share attempt here on purpose: this branch is only reached
+      // when the export wasn't warm, and by now the transient activation the
+      // share sheet requires is likely spent. Save the card and open the
+      // composer instead — that always works.
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = safeFileName(name);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
 
-      const intent = tweetIntentUrl(caption, shareUrl);
+      const intent = tweetIntentUrl(caption);
       if (pending && !pending.closed) {
         pending.location.replace(intent);
-        setStatus("X opened with your caption and card preview.");
-        return;
-      }
-
-      // Popup was blocked. A second window.open after an await is usually
-      // blocked too, so surface a real link the user can click instead of
-      // silently doing nothing.
-      const opened = window.open(intent, "_blank", "noopener");
-      if (!opened) {
-        setTweetIntent(intent);
-        setStatus("Popup blocked — use the “Open X” link below.");
       } else {
-        setStatus("X opened with your caption and card preview.");
+        const opened = window.open(intent, "_blank", "noopener");
+        if (!opened) {
+          setTweetIntent(intent);
+          setStatus("Card saved. Popup blocked — use the “Open X” link below.");
+          return;
+        }
       }
+      setStatus("Card saved to your downloads — attach it in the tweet that just opened.");
     } catch (error) {
       pending?.close();
+      // The user dismissing the share sheet is not a failure.
+      if ((error as Error)?.name === "AbortError") {
+        setStatus(null);
+        return;
+      }
       console.error(error);
       const why = error instanceof Error ? error.message : String(error);
-      setStatus(`Couldn't open X (${why}). Download the card and post it manually.`);
+      setStatus(`Couldn't open X (${why}). Use Download and post it manually.`);
     } finally {
       setBusy(null);
     }
@@ -670,7 +700,7 @@ export default function Studio() {
           <p className={styles.hint}>
             {hasPhoto
               ? "Drag the card to reposition · pinch or scroll to zoom · arrow keys nudge"
-              : "Your photo never leaves this device unless you use the desktop share link."}
+              : "Your photo never leaves this device — the card is built right here in your browser."}
           </p>
         </section>
 
