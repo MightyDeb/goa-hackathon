@@ -345,7 +345,7 @@ select.input {
 
 .skillOn {
   background: var(--beige);
-  color: var(--brand-green);
+  color: var(--beige-ink);
   border-color: var(--beige);
 }
 

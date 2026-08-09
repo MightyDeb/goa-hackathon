@@ -296,7 +296,13 @@ function drawTracked(ctx: Ctx2D, text: string, x: number, y: number, layer: Text
   ctx.textAlign = prevAlign;
 }
 
-function wrapLines(ctx: Ctx2D, text: string, layer: TextLayer, size: number, fonts: FontBook, maxLines: number): string[] {
+/**
+ * Wraps to however many lines the text actually needs — deliberately uncapped.
+ * Capping here would silently drop trailing words ("Commit Message Poet
+ * Laureate" losing "Laureate"); the caller shrinks the type until the line
+ * count fits instead.
+ */
+function wrapLines(ctx: Ctx2D, text: string, layer: TextLayer, size: number, fonts: FontBook): string[] {
   applyFont(ctx, layer, size, fonts);
   const words = text.split(/\s+/).filter(Boolean);
   const lines: string[] = [];
@@ -308,10 +314,9 @@ function wrapLines(ctx: Ctx2D, text: string, layer: TextLayer, size: number, fon
     } else {
       lines.push(current);
       current = word;
-      if (lines.length === maxLines) break;
     }
   }
-  if (current && lines.length < maxLines) lines.push(current);
+  if (current) lines.push(current);
   return lines.length ? lines : [text];
 }
 
@@ -361,10 +366,21 @@ function drawTextLayer(ctx: Ctx2D, layer: TextLayer, data: CardData, fonts: Font
   let size = layer.size;
   let lines: string[] = [text];
   if (isMultiline) {
-    lines = wrapLines(ctx, text, layer, size, fonts, 3);
-    while (size > minSize && lines.some((l) => measure(ctx, l, layer) > layer.maxWidth)) {
+    const MAX_LINES = 3;
+    lines = wrapLines(ctx, text, layer, size, fonts);
+    // Shrink for too many lines as well as over-wide ones, so a long title
+    // gets smaller rather than losing its last words.
+    while (
+      size > minSize &&
+      (lines.length > MAX_LINES || lines.some((l) => measure(ctx, l, layer) > layer.maxWidth))
+    ) {
       size -= 2;
-      lines = wrapLines(ctx, text, layer, size, fonts, 3);
+      lines = wrapLines(ctx, text, layer, size, fonts);
+    }
+    if (lines.length > MAX_LINES) {
+      // Floor reached and it still doesn't fit — ellipsise rather than drop.
+      lines = lines.slice(0, MAX_LINES);
+      lines[MAX_LINES - 1] = ellipsise(ctx, `${lines[MAX_LINES - 1]}…`, layer);
     }
   } else {
     applyFont(ctx, layer, size, fonts);

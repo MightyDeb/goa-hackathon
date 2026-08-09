@@ -14,10 +14,11 @@ import { EVENT_DATES, EVENT_TAG, EVENT_WORDMARK, type FontBook, type TemplateCon
 export const OG_WIDTH = 1200;
 export const OG_HEIGHT = 630;
 
-const BEIGE = "#EFE0C4";
-const INK = "#0B6839";
+const BEIGE = "#D0AE73";
+const INK = "#073E22";
 const GOLD = "#FFD84D";
 const DEEP = "#04170D";
+const BRAND_GREEN = "#0B6839";
 
 /** Sandy label, matching the cards. Returns the box's bottom edge. */
 function boxedLine(
@@ -85,7 +86,8 @@ export function renderOgImage(
 
   // Backdrop: the template's own artwork, heavily darkened so the type on top
   // stays readable at thumbnail size.
-  ctx.fillStyle = DEEP;
+  // Matches the cards: solid brand green with the artwork at 20%.
+  ctx.fillStyle = BRAND_GREEN;
   ctx.fillRect(0, 0, OG_WIDTH, OG_HEIGHT);
 
   const art = config.backdrop.kind === "image" ? getBackground(config.backdrop.src) : null;
@@ -94,11 +96,9 @@ export function renderOgImage(
     const dw = art.width * scale;
     const dh = art.height * scale;
     ctx.save();
-    ctx.globalAlpha = 0.55;
+    ctx.globalAlpha = 0.2;
     ctx.drawImage(art, (OG_WIDTH - dw) / 2, (OG_HEIGHT - dh) / 2, dw, dh);
     ctx.restore();
-    ctx.fillStyle = withAlpha(DEEP, 0.72);
-    ctx.fillRect(0, 0, OG_WIDTH, OG_HEIGHT);
   }
 
   // The card, whole and uncropped, at its real 4:5 aspect.

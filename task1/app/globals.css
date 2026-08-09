@@ -8,7 +8,9 @@
  */
 :root {
   --brand-green: #0b6839;
-  --beige: #efe0c4;
+  --beige: #d0ae73;
+  /* Deepened green for ink on the sand — #0B6839 on #D0AE73 is only 3.2:1. */
+  --beige-ink: #073e22;
 
   --bg: #04170d;
   --bg-raised: #0a3520;
