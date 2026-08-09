@@ -14,10 +14,40 @@ import { EVENT_DATES, EVENT_TAG, EVENT_WORDMARK, type FontBook, type TemplateCon
 export const OG_WIDTH = 1200;
 export const OG_HEIGHT = 630;
 
-const GOLD = "#FFD230";
-const GOLD_SOFT = "#FFE9A8";
-const KELLY_BRIGHT = "#7BE83A";
-const DEEP = "#04170A";
+const BEIGE = "#EFE0C4";
+const INK = "#0B6839";
+const GOLD = "#FFD84D";
+const DEEP = "#04170D";
+
+/** Sandy label, matching the cards. Returns the box's bottom edge. */
+function boxedLine(
+  ctx: Ctx2D,
+  text: string,
+  x: number,
+  top: number,
+  family: string,
+  weight: number,
+  size: number,
+  maxWidth: number,
+): number {
+  ctx.font = `${weight} ${size}px ${family}`;
+  const label = ellipsise(ctx, text, maxWidth);
+  const m = ctx.measureText(label);
+  const ascent = m.actualBoundingBoxAscent || size * 0.75;
+  const descent = m.actualBoundingBoxDescent || size * 0.22;
+  const padX = 16;
+  const padY = 10;
+  const boxH = ascent + descent + padY * 2;
+
+  ctx.fillStyle = BEIGE;
+  roundRectPath(ctx, x, top, m.width + padX * 2, boxH, 8);
+  ctx.fill();
+
+  ctx.fillStyle = INK;
+  ctx.textBaseline = "alphabetic";
+  ctx.fillText(label, x + padX, top + padY + ascent);
+  return top + boxH;
+}
 
 function fitText(
   ctx: Ctx2D,
@@ -97,40 +127,24 @@ export function renderOgImage(
   roundRectPath(ctx, cardX, cardY, cardW, cardH, 18);
   ctx.stroke();
 
-  // Details column.
+  // Details column — same sandy labels as the cards.
   const colX = cardX + cardW + 56;
   const colW = OG_WIDTH - colX - 64;
   ctx.textAlign = "left";
 
-  ctx.textBaseline = "middle";
-  ctx.fillStyle = GOLD_SOFT;
-  ctx.font = `700 26px ${fonts.mono}`;
-  ctx.fillText(ellipsise(ctx, EVENT_WORDMARK, colW), colX, 132);
-
-  ctx.fillStyle = KELLY_BRIGHT;
-  ctx.font = `500 22px ${fonts.mono}`;
-  ctx.fillText(ellipsise(ctx, EVENT_DATES, colW), colX, 176);
+  let y = 92;
+  y = boxedLine(ctx, EVENT_WORDMARK, colX, y, fonts.mono, 700, 24, colW - 40) + 12;
+  y = boxedLine(ctx, EVENT_DATES, colX, y, fonts.mono, 700, 22, colW - 40) + 34;
 
   const name = (data.name || "Your Name").toUpperCase();
-  const nameSize = fitText(ctx, name, fonts.display, 700, 62, 34, colW);
-  ctx.fillStyle = GOLD;
-  ctx.font = `700 ${nameSize}px ${fonts.display}`;
-  ctx.textBaseline = "alphabetic";
-  ctx.fillText(ellipsise(ctx, name, colW), colX, 300);
+  const nameSize = fitText(ctx, name, fonts.display, 700, 58, 30, colW - 40);
+  y = boxedLine(ctx, name, colX, y, fonts.display, 700, nameSize, colW - 40) + 12;
 
   if (data.title) {
-    const titleSize = fitText(ctx, data.title, fonts.display, 500, 36, 22, colW);
-    ctx.fillStyle = KELLY_BRIGHT;
-    ctx.font = `500 ${titleSize}px ${fonts.display}`;
-    ctx.fillText(ellipsise(ctx, data.title, colW), colX, 352);
+    const titleSize = fitText(ctx, data.title, fonts.display, 600, 34, 20, colW - 40);
+    y = boxedLine(ctx, data.title, colX, y, fonts.display, 600, titleSize, colW - 40) + 34;
   }
 
-  ctx.textBaseline = "middle";
-  ctx.fillStyle = GOLD_SOFT;
-  ctx.font = `600 19px ${fonts.mono}`;
-  ctx.fillText(ellipsise(ctx, EVENT_TAG, colW), colX, 452);
-
-  ctx.fillStyle = KELLY_BRIGHT;
-  ctx.font = `500 22px ${fonts.mono}`;
-  ctx.fillText("#FrameInGoa", colX, 500);
+  y = boxedLine(ctx, EVENT_TAG, colX, y, fonts.mono, 600, 18, colW - 40) + 12;
+  boxedLine(ctx, "#FrameInGoa", colX, y, fonts.mono, 600, 20, colW - 40);
 }

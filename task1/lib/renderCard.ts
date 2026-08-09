@@ -379,17 +379,31 @@ function drawTextLayer(ctx: Ctx2D, layer: TextLayer, data: CardData, fonts: Font
   const lineStep = size * (layer.lineHeight ?? 1);
 
   if (layer.pill) {
-    const w = measure(ctx, lines[0], layer);
+    // Size the box from real glyph metrics rather than the nominal font size,
+    // so a one-word label and a three-line block both sit correctly inside it.
+    const widest = Math.max(...lines.map((l) => measure(ctx, l, layer)));
+    const metrics = ctx.measureText(lines[0]);
+    const ascent = metrics.actualBoundingBoxAscent || size * 0.75;
+    const descent = metrics.actualBoundingBoxDescent || size * 0.22;
+    const blockH = ascent + descent + (lines.length - 1) * lineStep;
+
     const { padX, padY, radius, fill, stroke } = layer.pill;
-    const boxW = w + padX * 2;
-    const boxH = size + padY * 2;
+    const boxW = widest + padX * 2;
+    const boxH = blockH + padY * 2;
+
     let bx = layer.x - padX;
     if (layer.align === "center") bx = layer.x - boxW / 2;
     else if (layer.align === "right") bx = layer.x - boxW + padX;
-    const by = layer.baseline === "middle" ? layer.y - boxH / 2 : layer.y - boxH + padY;
+
+    let textTop: number;
+    if (layer.baseline === "top") textTop = layer.y;
+    else if (layer.baseline === "middle") textTop = layer.y - (ascent + descent) / 2;
+    else if (layer.baseline === "bottom") textTop = layer.y - (ascent + descent);
+    else textTop = layer.y - ascent; // alphabetic
+
     ctx.save();
     ctx.fillStyle = fill;
-    roundRectPath(ctx, bx, by, boxW, boxH, radius);
+    roundRectPath(ctx, bx, textTop - padY, boxW, boxH, radius);
     ctx.fill();
     if (stroke) {
       ctx.strokeStyle = stroke;

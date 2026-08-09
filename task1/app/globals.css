@@ -7,15 +7,20 @@
  * at ~13:1 and the kelly accents at ~7:1, both comfortably past WCAG AA.
  */
 :root {
-  --bg: #04170a;
-  --bg-raised: #0a2e12;
-  --bg-input: #0d3a17;
-  --border: #1d6b2c;
-  --text: #ffd230;
-  --muted: #b9c98d;
-  --accent: #4cbb17;
-  --accent-2: #7be83a;
-  --gold-soft: #ffe9a8;
+  --brand-green: #0b6839;
+  --beige: #efe0c4;
+
+  --bg: #04170d;
+  --bg-raised: #0a3520;
+  --bg-input: #0b4227;
+  --border: #0b6839;
+  --text: #ffd84d;
+  --muted: #a9c4b1;
+  /* A lightened brand green: #0B6839 as small text on the dark surface is only
+     ~2.7:1, so accents that carry text use this while fills use the brand. */
+  --accent: #3fbe77;
+  --accent-2: #62d998;
+  --gold-soft: #ffeaa6;
   --radius: 14px;
 }
 
@@ -31,8 +36,8 @@ body {
 
 body {
   background:
-    radial-gradient(900px 600px at 12% -8%, rgba(76, 187, 23, 0.18), transparent 60%),
-    radial-gradient(760px 520px at 92% 8%, rgba(255, 210, 48, 0.1), transparent 62%),
+    radial-gradient(900px 600px at 12% -8%, rgba(11, 104, 57, 0.5), transparent 62%),
+    radial-gradient(760px 520px at 92% 8%, rgba(255, 216, 77, 0.09), transparent 62%),
     var(--bg);
   background-attachment: fixed;
   color: var(--text);

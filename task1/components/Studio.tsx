@@ -26,6 +26,7 @@ import styles from "./studio.module.css";
 
 const NAME_MAX = 24;
 const MAX_DPR = 2;
+const MAX_ROLES = 2;
 
 type Scene = { name: string; role: string; title: string; templateId: string };
 
@@ -33,7 +34,9 @@ type Timings = { decode?: number; frame?: number; export?: number };
 
 export default function Studio() {
   const [name, setName] = useState("");
-  const [role, setRole] = useState(ROLES[0]);
+  /** Up to two skills; the card renders them joined. */
+  const [roles, setRoles] = useState<string[]>([ROLES[0]]);
+  const role = useMemo(() => roles.join("  ·  "), [roles]);
   // Deterministic on the server. Rolling during render would call Math.random()
   // on both the server and the client and hydrate with two different titles.
   const [title, setTitle] = useState(BUILDER_TITLES[0]);
@@ -782,21 +785,39 @@ export default function Studio() {
           </div>
 
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="role">
-              Stack / role
-            </label>
-            <select
-              id="role"
-              className={styles.input}
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-            >
-              {ROLES.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
+            <span className={styles.label}>
+              Stack / skills
+              <span className={styles.counter}>{roles.length}/{MAX_ROLES}</span>
+            </span>
+            <div className={styles.skills} role="group" aria-label="Stack or skills, pick up to two">
+              {ROLES.map((r) => {
+                const on = roles.includes(r);
+                // Only block the ones you can't add; never disable a selected
+                // chip, or you can't get back under the cap.
+                const full = roles.length >= MAX_ROLES && !on;
+                return (
+                  <button
+                    key={r}
+                    type="button"
+                    aria-pressed={on}
+                    disabled={full}
+                    className={`${styles.skill} ${on ? styles.skillOn : ""}`}
+                    onClick={() =>
+                      setRoles((prev) => {
+                        if (prev.includes(r)) {
+                          // Keep at least one so the card never loses the field.
+                          return prev.length === 1 ? prev : prev.filter((x) => x !== r);
+                        }
+                        return prev.length >= MAX_ROLES ? prev : [...prev, r];
+                      })
+                    }
+                  >
+                    {r}
+                  </button>
+                );
+              })}
+            </div>
+            <p className={styles.microHint}>Pick up to two — both appear on the card.</p>
           </div>
 
           <div className={styles.field}>

@@ -138,11 +138,21 @@ instead of being washed out until it may as well not be there.
 
 ### Palette
 
-Kelly green surfaces, golden yellow type. Worth noting *why* it isn't literally
-gold-on-kelly-green: `#FFD230` on `#4CBB17` is about **1.8:1** contrast, which
-is unreadable. So kelly green carries accents, rings, pills and borders, while
-surfaces use deep kelly-green shades — putting body text at ~13:1 and accents
-at ~7:1, both past WCAG AA.
+Green `#0B6839`, type `#FFD84D`.
+
+On the **cards**, every string sits in a sandy beige box (`#EFE0C4`) with deep
+green ink — 5.3:1 contrast, past WCAG AA. Because the boxes carry legibility,
+the background artwork runs at full opacity with only a light green tint, and
+the heavy scrims the old design needed are gone entirely.
+
+In the **UI**, `#0B6839` fills borders, chips and surfaces while `#FFD84D`
+carries the type. One deliberate deviation: `#0B6839` as *small text* on the
+dark surface is only ~2.7:1, so text-bearing accents use a lightened
+`#3FBE77` instead. Fills and borders use the brand green as specified.
+
+The event logo is yellow and pink, which disappears against pale sand and light
+foliage — so it sits on its own deep-green panel, doing for the mark what the
+beige boxes do for the type.
 
 ## Share
 
