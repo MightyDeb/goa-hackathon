@@ -28,7 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         {/* The default template's artwork, fetched alongside the HTML rather
             than after the bundle has parsed and the studio has mounted. */}
-        <link rel="preload" as="image" href="/templates/bg-1.webp" type="image/webp" />
+        <link rel="preload" as="image" href="/templates/main.webp" type="image/webp" />
       </head>
       <body>{children}</body>
     </html>

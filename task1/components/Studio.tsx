@@ -847,21 +847,21 @@ export default function Studio() {
                   className={`${styles.templateChip} ${t.id === templateId ? styles.templateChipOn : ""}`}
                   onClick={() => setTemplateId(t.id)}
                 >
-                  {/* The real artwork, not an abstract colour chip — it's
-                      already loaded, so the picker may as well show it. */}
-                  <span
-                    className={styles.swatch}
-                    style={
-                      t.backdrop.kind === "image"
-                        ? {
-                            backgroundImage: `linear-gradient(135deg, ${t.swatch[0]}55, ${t.swatch[1]}33), url(${t.backdrop.src})`,
-                            backgroundSize: "cover",
-                            backgroundPosition: "center",
-                          }
-                        : { background: `linear-gradient(135deg, ${t.swatch[0]}, ${t.swatch[1]})` }
-                    }
-                    aria-hidden
-                  />
+                  {/* All templates share one backdrop now, so a thumbnail of it
+                      would be the same picture three times. The chip sketches
+                      the layout instead — which is what actually differs. */}
+                  <span className={styles.swatch} aria-hidden>
+                    <span
+                      className={`${styles.swatchShape} ${
+                        t.slot.shape === "circle"
+                          ? styles.swatchCircle
+                          : t.slot.shape === "rect"
+                            ? styles.swatchRect
+                            : styles.swatchRounded
+                      }`}
+                    />
+                    <span className={styles.swatchBar} />
+                  </span>
                   <span className={styles.templateText}>
                     <strong>{t.label}</strong>
                     <em>{t.blurb}</em>

@@ -6,9 +6,10 @@
  * template re-runs the same composite against a different config — no
  * re-upload, no re-crop, no extra render path to maintain.
  *
- * Each template is backed by one of the three Goa illustrations, drawn at 20%
- * over a solid brand-green base, so the artwork reads as texture rather than
- * competing with the photo and the type.
+ * All three share one backdrop illustration, drawn faintly over a solid
+ * brand-green base so it reads as texture rather than competing with the photo
+ * and the type. What distinguishes them is layout: slot shape, crop and
+ * typographic structure.
  */
 
 export type FontRole = "display" | "body" | "mono";
@@ -60,6 +61,7 @@ export type Decor =
   | { kind: "cornerMarks"; inset: number; len: number; color: string; width: number }
   | { kind: "grain"; alpha: number }
   | { kind: "panel"; x: number; y: number; w: number; h: number; color: string; alpha: number; radius?: number }
+  | { kind: "border"; width: number; color: string; inset?: number; radius?: number; inner?: { gap: number; width: number; color: string } }
   | { kind: "blob"; cx: number; cy: number; r: number; color: string; alpha: number }
   | { kind: "barcode"; x: number; y: number; w: number; h: number; color: string };
 
@@ -113,6 +115,8 @@ export const EVENT_TAG = "#BUILDING THE FUTURE — AIxCRYPTO";
 /** Set in caps to match the cards' existing label typography. */
 export const EVENT_WORDMARK = "HACKER HOUSE GOA";
 const LOGO_SRC = "/templates/logo.webp";
+const MAIN_BG = "/templates/main.webp";
+const VERIFIED_SRC = "/templates/verified.webp";
 
 const W = 1080;
 const H = 1350;
@@ -143,6 +147,30 @@ const DEEP = "#052E19";
 const DEEP_2 = "#0A4527";
 
 /**
+ * Gold ID-card frame — a solid band plus a hairline inside it, identical on
+ * every template. Occupies the outer ~32px, so nothing else may sit above y=40.
+ */
+const ID_BORDER: Decor = {
+  kind: "border",
+  width: 22,
+  color: BRAND_GOLD,
+  inner: { gap: 7, width: 3, color: BRAND_GOLD },
+};
+
+/** Verified stamp, centred on the top-right corner of a photo slot. */
+function verifiedStamp(slot: PhotoSlot, size: number, cornerInset = 30): LogoLayer {
+  const cx =
+    slot.shape === "circle"
+      ? slot.x + slot.w / 2 + (Math.min(slot.w, slot.h) / 2) * Math.SQRT1_2
+      : slot.x + slot.w - cornerInset;
+  const cy =
+    slot.shape === "circle"
+      ? slot.y + slot.h / 2 - (Math.min(slot.w, slot.h) / 2) * Math.SQRT1_2
+      : slot.y + cornerInset;
+  return { src: VERIFIED_SRC, x: cx - size / 2, y: cy - size / 2, w: size };
+}
+
+/**
  * Every string on a card sits in a sandy box with deep-green ink. Boxes are
  * sized from real glyph metrics in renderCard, so they hug whatever they hold.
  */
@@ -165,6 +193,18 @@ function boxed(
   };
 }
 
+const beachSlot: PhotoSlot = {
+  shape: "rounded",
+  x: 130,
+  y: 250,
+  w: 820,
+  h: 680,
+  radius: 30,
+  placeholder: DEEP_2,
+  ring: { color: BEIGE, width: 9 },
+  glow: { color: "rgba(5,46,25,0.55)", blur: 46 },
+};
+
 /**
  * 1 — BEACH FLAT-LAY
  * Near-full-bleed rounded portrait, sandy labels, left-aligned display type.
@@ -178,7 +218,7 @@ const beachFlatLay: TemplateConfig = {
   height: H,
   backdrop: {
     kind: "image",
-    src: "/templates/bg-1.webp",
+    src: MAIN_BG,
     base: BRAND_GREEN,
     // Solid brand green with the artwork showing through faintly — texture
     // rather than subject.
@@ -186,23 +226,17 @@ const beachFlatLay: TemplateConfig = {
     tint: { color: BRAND_GREEN, alpha: 0 },
   },
   decorBelow: [{ kind: "grain", alpha: 0.03 }],
-  slot: {
-    shape: "rounded",
-    x: 130,
-    y: 240,
-    w: 820,
-    h: 690,
-    radius: 30,
-    placeholder: DEEP_2,
-    ring: { color: BEIGE, width: 9 },
-    glow: { color: "rgba(5,46,25,0.55)", blur: 46 },
-  },
+  slot: beachSlot,
   // Panel ends at x=298; the lockup text starts at x=336 so its box edge
   // (336 - padX) clears it rather than sitting under the mark.
   decorAbove: [
-    { kind: "panel", x: 114, y: 28, w: 184, h: 157, color: DEEP, alpha: 0.82, radius: 14 },
+    { kind: "panel", x: 114, y: 46, w: 184, h: 152, color: DEEP, alpha: 0.82, radius: 14 },
+    ID_BORDER,
   ],
-  logos: [{ src: LOGO_SRC, x: 130, y: 40, w: 152, align: "left" }],
+  logos: [
+    { src: LOGO_SRC, x: 130, y: 56, w: 152, align: "left" },
+    verifiedStamp(beachSlot, 116),
+  ],
   layers: [
     boxed({
       key: "literal",
@@ -325,6 +359,17 @@ const beachFlatLay: TemplateConfig = {
   ],
 };
 
+const palmSlot: PhotoSlot = {
+  shape: "circle",
+  x: 330,
+  y: 400,
+  w: 420,
+  h: 420,
+  placeholder: DEEP_2,
+  ring: { color: BEIGE, width: 14 },
+  glow: { color: "rgba(5,46,25,0.6)", blur: 46 },
+};
+
 /**
  * 2 — PALM ROAD
  * Centred circular badge, symmetric lanyard-ID layout.
@@ -338,26 +383,21 @@ const palmRoad: TemplateConfig = {
   height: H,
   backdrop: {
     kind: "image",
-    src: "/templates/bg-2.webp",
+    src: MAIN_BG,
     base: BRAND_GREEN,
     imageAlpha: 0.1,
     tint: { color: BRAND_GREEN, alpha: 0 },
   },
   decorBelow: [{ kind: "grain", alpha: 0.04 }],
-  slot: {
-    shape: "circle",
-    x: 330,
-    y: 396,
-    w: 420,
-    h: 420,
-    placeholder: DEEP_2,
-    ring: { color: BEIGE, width: 14 },
-    glow: { color: "rgba(5,46,25,0.6)", blur: 46 },
-  },
+  slot: palmSlot,
   decorAbove: [
-    { kind: "panel", x: 409, y: 28, w: 262, h: 224, color: DEEP, alpha: 0.8, radius: 16 },
+    { kind: "panel", x: 413, y: 46, w: 254, h: 214, color: DEEP, alpha: 0.8, radius: 16 },
+    ID_BORDER,
   ],
-  logos: [{ src: LOGO_SRC, x: 540, y: 40, w: 230, align: "center" }],
+  logos: [
+    { src: LOGO_SRC, x: 540, y: 56, w: 222, align: "center" },
+    verifiedStamp(palmSlot, 104),
+  ],
   layers: [
     boxed({
       key: "literal",
@@ -464,6 +504,16 @@ const palmRoad: TemplateConfig = {
   ],
 };
 
+const chapelSlot: PhotoSlot = {
+  shape: "rect",
+  x: 90,
+  y: 282,
+  w: 620,
+  h: 634,
+  placeholder: DEEP_2,
+  ring: { color: BEIGE, width: 3 },
+};
+
 /**
  * 3 — CHAPEL GREEN
  * Asymmetric hard-edged crop, ticket-stub typography.
@@ -477,32 +527,26 @@ const chapelGreen: TemplateConfig = {
   height: H,
   backdrop: {
     kind: "image",
-    src: "/templates/bg-3.webp",
+    src: MAIN_BG,
     base: BRAND_GREEN,
     imageAlpha: 0.1,
     tint: { color: BRAND_GREEN, alpha: 0 },
   },
-  decorBelow: [
-    { kind: "grain", alpha: 0.04 },
-  ],
-  slot: {
-    shape: "rect",
-    x: 90,
-    y: 276,
-    w: 620,
-    h: 640,
-    placeholder: DEEP_2,
-    ring: { color: BEIGE, width: 3 },
-  },
+  decorBelow: [{ kind: "grain", alpha: 0.04 }],
+  slot: chapelSlot,
   // Panel ends at x=266; the lockup text starts at x=300 so its box edge clears
   // the mark instead of running under it.
   decorAbove: [
-    { kind: "panel", x: 74, y: 34, w: 192, h: 163, color: DEEP, alpha: 0.82, radius: 12 },
-    { kind: "rule", x: 90, y: 232, w: 900, h: 3, color: BEIGE },
+    { kind: "panel", x: 74, y: 46, w: 192, h: 158, color: DEEP, alpha: 0.82, radius: 12 },
+    { kind: "rule", x: 90, y: 238, w: 900, h: 3, color: BEIGE },
     { kind: "perforation", y: 962, r: 7, gap: 34, color: BEIGE_DEEP },
     { kind: "barcode", x: 762, y: 792, w: 226, h: 124, color: BEIGE },
+    ID_BORDER,
   ],
-  logos: [{ src: LOGO_SRC, x: 90, y: 46, w: 160, align: "left" }],
+  logos: [
+    { src: LOGO_SRC, x: 90, y: 58, w: 160, align: "left" },
+    verifiedStamp(chapelSlot, 104),
+  ],
   layers: [
     boxed({
       key: "literal",

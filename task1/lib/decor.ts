@@ -219,6 +219,35 @@ export function paintDecor(ctx: Ctx2D, d: Decor, W: number, H: number, scale: nu
       }
       break;
     }
+    case "border": {
+      // Stroke sits half in/half out, so offset by half the width to keep the
+      // whole band inside the card rather than clipped at the bleed edge.
+      const inset = d.inset ?? 0;
+      const half = d.width / 2;
+      ctx.strokeStyle = d.color;
+      ctx.lineWidth = d.width;
+      if (d.radius) {
+        roundRectPath(ctx, inset + half, inset + half, W - 2 * (inset + half), H - 2 * (inset + half), d.radius);
+      } else {
+        ctx.beginPath();
+        ctx.rect(inset + half, inset + half, W - 2 * (inset + half), H - 2 * (inset + half));
+      }
+      ctx.stroke();
+
+      if (d.inner) {
+        const io = inset + d.width + d.inner.gap + d.inner.width / 2;
+        ctx.strokeStyle = d.inner.color;
+        ctx.lineWidth = d.inner.width;
+        if (d.radius) {
+          roundRectPath(ctx, io, io, W - 2 * io, H - 2 * io, Math.max(2, d.radius - d.width));
+        } else {
+          ctx.beginPath();
+          ctx.rect(io, io, W - 2 * io, H - 2 * io);
+        }
+        ctx.stroke();
+      }
+      break;
+    }
     case "panel": {
       ctx.globalAlpha = d.alpha;
       ctx.fillStyle = d.color;
